@@ -26,6 +26,9 @@ colnames(wideformda)[colnames(wideformda)=="Diag.AV45"] <- "Diag.AV45_1" # renam
 colnames(wideformda)[colnames(wideformda)=="AV45_NONTP_CorticalSummary.CerebellarWhole_1"] <- "AV45_TP_CorticalSummary.CerebellarWhole_1"
 colnames(wideformda)[colnames(wideformda)=="AV45_NONTP_CorticalSummary.BigRef_1"] <- "AV45_TP_CorticalSummary.BigRef_1"
 
+4+3
+hi <- 7
+#hi my name is austin
 ```
 
 
