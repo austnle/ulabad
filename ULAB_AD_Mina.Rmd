@@ -1,0 +1,150 @@
+---
+title: "ULAB_AD_Mina"
+author: "Mina Baghai"
+date: "2/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+``` {r}
+# load data from csv into R dataframe
+datapath <- file.path('/Users', 'minabaghai', 'OneDrive', 'Documents', 'Berkeley', 'ULab') # point to directory with data file
+data_frame <- file.path(datapath, "Subjects_TP1.csv") # Path to spreadsheet 
+wideformda <- read.csv(data_frame) # wide form since each visit has its own column, one row per individual
+colnames(wideformda)[colnames(wideformda)=="Diag.AV45"] <- "Diag.AV45_1" #rename one annoying column
+colnames(wideformda)[colnames(wideformda)=="AV45_NONTP_CorticalSummary.CerebellarWhole_1"] <- "AV45_TP_CorticalSummary.CerebellarWhole_1"
+
+colnames(wideformda)[colnames(wideformda)=="AV45_NONTP_CorticalSummary.BigRef_1"] <- "AV45_TP_CorticalSummary.BigRef_1"
+```
+
+```{r}
+# vector of all variable names we want to include in our analyses (NEED TO ADD COLUMNS)
+desired_column_names <- c("AV45_Date",
+                          "Age.AV45",
+                          "Diag.AV45",
+                          "UW_MEM_AV45",
+                          "UW_EF_AV45",
+                          "AV45_TP_CorticalSummary.CerebellarWhole",
+                          "AV45_TP_CorticalSummary.BigRef",
+                          "Diagnosis_DATE")
+
+# vector of variable names that don't change from visit to visit
+baseline_vars <- c("SID","Gender","APOE2_BIN","APOE4_NUM","Edu..Yrs.")
+```
+
+```{r}
+longformda <- list() # initialize empty list
+# loop through each desired column above and create a list of data frames in long format with only the baseline variables and data from each visit for that column
+for (colname in desired_column_names) {
+  # all column beginning with the desired column name
+  columns_to_reshape <- c(names(wideformda)[startsWith(names(wideformda), colname)])
+  longformda[[colname]] <- reshape( # wide format data, baseline variables and desired columns only
+    data=wideformda[c(baseline_vars,columns_to_reshape)],
+    # specify that we're converting from wide to long format
+    direction="long",
+    # specify that we want to reshape these desired columns
+    varying=columns_to_reshape,
+    # define a new variable that will track what visit number the data comes from
+    timevar="visitnumber",
+    # indicate number of different visits with data for this variable
+    times=c(as.character(1:length(columns_to_reshape))),
+    # we name the column the desired column name
+    v.names=colname,
+    # indicate which variable we use to identify individuals
+    idvar="SID")
+}
+```
+
+```{r}
+# now that we have a list of data frames, this code merges all the data frames together in a compact way
+finalda <- Reduce(
+  function(x,y,...) merge(x, y, by=c(baseline_vars,"visitnumber"), all=TRUE), # merge "by" all the baseline variables and visit number
+  longformda)
+# order data by subject ID and visit number
+finalda$visitnumber <- as.integer(finalda$visitnumber)
+finalda <- finalda[order(finalda$SID, finalda$visitnumber),]
+finalda
+```
+
+
+
+# save formatted data frame to csv file for easy viewing
+#write.csv(finalda, file.path(datapath,"longform_spreadsheet.csv"), row.names=FALSE)
+
+```{r}
+write.csv(finalda, file.path(datapath,"longform_spreadsheet.csv"), row.names=FALSE)
+```
+NOTES
+summary <- c("Total", "Age at baseline, y","Female", "APOE4+", "Education, y", "Memory composite", "Executive function composite" )
+total <- nrow(newdata)
+mean_age <- mean(wideformda$Age.AV45_1)
+values <- c(total, mean_age,  )
+summary_table <- data.frame(summary, values)
+summary_table
+
+
+Defining our sample
+```{r}
+# subset to only cognitively normal individuals (Diag.AV45=="N")
+newdata <- subset(finalda, Diag.AV45 =="N") 
+
+# Goal: subset to only individuals with 2+ PET scans. Approach: subsetting to keep every row where SID is not NA for visitnumber 2
+
+# subset to every SID that is not NA for visitnumber (!(is.na(visitnumber)))
+newdata <- subset(newdata, !(is.na(visitnumber))) 
+# create an empty vector (titled two_visit_SIDs)
+two_visit_SIDs <- vector() 
+# create a subset of newdata called second_visits where (visitnumber == 2)
+second_visits <- subset(newdata, visitnumber == 2) 
+# go through second_visits and add the SID from that row into two_visit_SIDs
+for (i in 1:nrow(second_visits)) {
+  current_SID = second_visits$SID[i]
+  two_visit_SIDs <- c(two_visit_SIDs, current_SID)
+}
+# subset newdata to only include rows that contain SIDs in two_visit_SIDs (SID %in% two_visit_SIDs)
+newdata <- subset(newdata, SID %in% two_visit_SIDs)
+
+# compute summary statistics (see Table 1, don't need to include every single variable)
+```
+
+Computing other variables needed for analysis
+```{r}
+# compute baseline amyloid status (if AV45_NONTP_CorticalSummary/CerebellarWhole_1 > 1.11 (see paper), then AB+)
+
+# compute "time" variable: amount of time (days, months, years, w/e) in between AV45 scan and cognitive test (use dates of each from spreadsheet)
+
+# compute AV45 slope using linear regression (could be tricky, lmk if you need help:
+# 1) run lm(AV45_TP_CorticalSummary... ~ Age) for each individual
+# 2) the resulting "Estimate" value for Age is the AV45 slope for that individual
+```
+
+Spaghetti plots!
+```{r}
+# figure 1 from paper
+# use ggplot to plot age vs. AV45 SUVR for AB-
+
+# use ggplot to plot age vs. AV45 SUVR for AB+
+```
+
+
+Linear mixed effects model (LME)
+
+```{r}
+# look into nlme package, same basic structure as lm function: outcome ~ independent variables, also need to define:
+
+# random effects (intercept and slope coded as "~1+time|SID")
+
+# model control parameters (how hard your model tries to "converge", you can google this if interested but I would use these very liberal parameters: control = lmeControl(opt="optim",maxIter=100,msMaxIter=100,niterEM=50,msMaxEval=400))
+```
+
+Replicating Figure 3 from paper (if we have time)
+
+```{r}
+# if time and interesting in visualization
+# ggplot to make scatter plot of memory slope vs. annualized AV45 change, fit with geom_smooth(method='lm')
+```
+
+
