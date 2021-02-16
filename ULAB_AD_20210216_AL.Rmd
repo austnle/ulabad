@@ -1,7 +1,7 @@
 ---
 title: "ULAB"
 author: "Austin"
-date: "02/15/2021"
+date: "02/16/2021"
 output: pdf_document
 ---
 
@@ -110,9 +110,13 @@ nrow(newdata) #Gives us the number of cognitively normal subjects at baseline sc
 finaldata <- inner_join(select(newdata, SID), finalda, by= "SID")
 finaldata
 
-# compute summary statistics (see Table 1, don't need to include every single variable)
-
 ```
+
+Replicating Table 1 from the paper
+```{r}
+# compute summary statistics (see Table 1, don't need to include every single variable)
+```
+
 
 Computing other variables needed for analysis
 ```{r}
@@ -139,16 +143,19 @@ newdata$baseline_amyloid_status <- baseline_amyloid_status
 finaldata <- inner_join(select(newdata, SID, baseline_amyloid_status), finalda, by= "SID")
 finaldata
 
-# compute "time" variable: amount of time (days, months, years, w/e) in between AV45 scan and cognitive test (use dates of each from spreadsheet)
-
 ```
 
+We still need to compute the time variable:
+```{r}
+# compute "time" variable: amount of time (days, months, years, w/e) in between AV45 scan and cognitive test (use dates of each from spreadsheet)
+```
+
+
+Compute AV45 slope
 ```{r}
 # compute AV45 slope using linear regression (could be tricky, lmk if you need help:
 # 1) run lm(AV45_TP_CorticalSummary... ~ Age) for each individual
 # 2) the resulting "Estimate" value for Age is the AV45 slope for that individual
-
-
 
 ```
 
@@ -157,11 +164,25 @@ Spaghetti plots!
 # figure 1 from paper
 # use ggplot to plot age vs. AV45 SUVR for AB-
 
+baseline_negative <- finaldata %>% select(SID, Age.AV45, AV45_TP_CorticalSummary.BigRef, baseline_amyloid_status) %>% filter(baseline_amyloid_status == "AB-") %>% na.omit
 
+baseline_negative$SID <- as.factor(baseline_negative$SID) #We want SID to be categorical variable, otherwise R thinks it's a numerical value and will assign colors based on gradient
+
+p <- ggplot(data = baseline_negative, aes(x = Age.AV45, y = AV45_TP_CorticalSummary.BigRef, group = SID)) +geom_point(aes(color = SID)) + geom_line(aes(color = SID)) + geom_hline(yintercept = 0.79, linetype = "dotted") + theme(legend.position = "none") +xlim(50, 100)+ylim(0.65, 0.95) + ggtitle("Baseline Negative") + labs(y="Florbetapir SUVR", x = "Age (years)")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+p
 
 # use ggplot to plot age vs. AV45 SUVR for AB+
 
-baseline_positive <- finaldata %>% select(SID, Age.AV45, AV45_TP_CorticalSummary.BigRef, baseline_amyloid_status) %>% filter(baseline_amyloid_status == "AB+") 
+baseline_positive <- finaldata %>% select(SID, Age.AV45, AV45_TP_CorticalSummary.BigRef, baseline_amyloid_status) %>% filter(baseline_amyloid_status == "AB+") %>% na.omit
+
+baseline_positive$SID <- as.factor(baseline_positive$SID) #We want SID to be categorical variable, otherwise R thinks it's a numerical value and will assign colors based on gradient
+
+p2 <- ggplot(data = baseline_positive, aes(x = Age.AV45, y = AV45_TP_CorticalSummary.BigRef, group = SID)) +geom_point(aes(color = SID)) + geom_line(aes(color = SID)) + geom_hline(yintercept = 0.79, linetype = "dotted") + theme(legend.position = "none") +xlim(50, 100)+ylim(0.70, 1.25) + ggtitle("Baseline Positive") + labs(y="Florbetapir SUVR", x = "Age (years)")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+p2
 
 ```
 
