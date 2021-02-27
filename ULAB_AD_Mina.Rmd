@@ -1,7 +1,7 @@
 ---
 title: "ULAB_AD_Mina"
 author: "Mina Baghai"
-date: "2/16/2021"
+date: "2/26/2021"
 output: html_document
 ---
 
@@ -14,8 +14,8 @@ library(tidyr)
 library(nlme)
 library(ggplot2)
 library(dplyr)
-#install.packages("lubridate") you will need to run this line the first time you use a package, comment it out after.
 library(lubridate)
+library(zoo)
 ```
 
 ``` {r}
@@ -185,7 +185,10 @@ p2 <- ggplot(data = baseline_positive, aes(x = Age.AV45, y = AV45_TP_CorticalSum
 
 p2
 ```
-
+Replace all NA values in order to continue with LME
+```{r}
+na.locf(finalda)
+```
 
 Linear mixed effects model (LME)
 ```{r}
