@@ -1,0 +1,87 @@
+---
+title: "Ulab AD Jiayu code"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1.subset the data
+```{r}
+# file.choose() to find location
+oldwideformda=read.csv("/Users/krrrista/Desktop/2021 spring/Ulab/fall 2020/Subjects_TP.csv")
+
+# subset to only individuals with 2+ PET scans (ifAV45_TP_CorticalSummary/CerebellarWhole_2 is NA, remove)
+oldwideformda[is.na(oldwideformda)]=0
+
+wideformda_twomore=subset(oldwideformda,AV45_TP_CorticalSummary.CerebellarWhole_2!=0)
+#I tried ==NA, but it doesn't work. so i assigned 0 to all missing values. 
+
+
+# compute baseline amyloid status (if AV45_NONTP_CorticalSummary/CerebellarWhole_1 > 1.11 (see paper), then AB+)
+#for negative
+wide_neg=subset(wideformda_twomore, AV45_NONTP_CorticalSummary.CerebellarWhole_1 < 1.11 &AV45_NONTP_CorticalSummary.BigRef_1<0.79)
+
+
+#wideform negative 2+ scans, N
+wideform_2neg=subset(wide_neg,Diagnosis_1=="N")
+```
+241 obs--220 in paper
+  postive 61 obs --57 in paper 
+  negative 157 -- 142 in paper
+con: wdieform for first diag N, 2+ scan, baseline neg, total 157 obj.
+
+*summary table 1
+```{r}
+#Florbetapir follow up time, y, not sure how 
+followup_time=mean(wideform_2neg$UW_EF_postAV45_followuptime)
+#4.7, 3.9 in paper, way off, probably not the correct colume
+# need to calculate time variable
+
+#Age at baseline, y
+mean_age=mean(wideform_2neg$Age.AV45_1)
+sd_age=sd(wideform_2neg$Age.AV45_1)
+#didn't see which kind of sd calculation they used, I used the easier one on R, results are close
+
+#female
+one=subset(wideform_2neg,Gender==1)
+#not sure which is female, 1-89obs
+two=subset(wideform_2neg,Gender==2)
+# 89(67) --72 (45) in paper
+
+#APOE4+, not sure how
+
+#Education, y
+mean_edu=mean(wideform_2neg$Edu..Yrs.)
+sd_edu=sd(wideform_2neg$Edu..Yrs.)
+#those are close
+
+#Converted to MCI/AD
+#MCI
+
+```
+
+
+2.calculate the annualized f change
+  
+```{r}
+#annualized f change? 
+
+lm.out=lm(UW_EF_slope_postAV45 ~ (UW_EF_2-UW_EF_1), wideform_2neg)
+ggplot(wideform_2neg,aes(x=(UW_EF_2-UW_EF_1),y=UW_EF_slope_postAV45,color=Diagnosis_2)) +
+  geom_point()+
+  geom_smooth(method="lm", color="yellow",se=F)
+```
+
+3. more data subset
+  which diag to use if more than 2? 
+    Normal, negative;
+    convert to MCI, negative; 
+    convert to AD, negative; 
+    Normal, positive;
+    convert to MCI, positive 
+```{r}
+
+```
+
