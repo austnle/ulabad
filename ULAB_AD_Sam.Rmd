@@ -1,0 +1,282 @@
+---
+title: "ULAB"
+author: "Samantha"
+date: "02/28/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyr)
+library(nlme)
+library(ggplot2)
+library(dplyr)
+#install.packages("lubridate") you will need to run this line the first time you use a package, comment it out after.
+library(lubridate)
+#install.packages("zoo")
+library(zoo)
+#install.packages("plotrix")
+library(plotrix)
+```
+
+## R Markdown
+
+```{r}
+# load data from csv into R dataframe
+datapath <- file.path('/Users','samanthajuang','Documents','Berkeley','Psych 199') # point to directory with data file (NEED TO CHANGE)
+data_fname <- file.path(datapath,"Subjects_TP (1).csv") # path to spreadsheet
+wideformda <- read.csv(data_fname) # wide form since each visit has its own column, one row per individual
+colnames(wideformda)[colnames(wideformda)=="Diag.AV45"] <- "Diag.AV45_1" # rename one annoying column
+wideformda$baseline_AV45_TP_CorticalSummary.CerebellarWhole_1 <- wideformda$AV45_NONTP_CorticalSummary.CerebellarWhole_1
+wideformda$baseline_AV45_TP_CorticalSummary.BigRef_1 <- wideformda$AV45_NONTP_CorticalSummary.BigRef_1
+colnames(wideformda)[colnames(wideformda)=="AV45_NONTP_CorticalSummary.CerebellarWhole_1"] <- "AV45_TP_CorticalSummary.CerebellarWhole_1"
+colnames(wideformda)[colnames(wideformda)=="AV45_NONTP_CorticalSummary.BigRef_1"] <- "AV45_TP_CorticalSummary.BigRef_1"
+
+wideformda
+```
+
+
+```{r}
+# vector of all variable names we want to include in our analyses (NEED TO ADD COLUMNS)
+desired_column_names <- c("AV45_Date",
+                          "Age.AV45",
+                          "Diag.AV45",
+                          "Diag.AV45_1",
+                          "UW_MEM_AV45",
+                          "UW_EF_AV45",
+                          "AV45_TP_CorticalSummary.CerebellarWhole",
+                          "baseline_AV45_TP_CorticalSummary.CerebellarWhole_1",
+                          "AV45_TP_CorticalSummary.CerebellarWhole_2",
+                          "AV45_TP_CorticalSummary.BigRef",
+                          "baseline_AV45_TP_CorticalSummary.BigRef_1",
+                          "AV45_TP_CorticalSummary.BigRef_2")
+                          #"UW_TEST_EXAMDATE",
+                          #"UW_EF",
+                          #"UW_MEM")
+
+# vector of variable names that don't change from visit to visit
+baseline_vars <- c("SID","Gender","APOE2_BIN","APOE4_NUM","Edu..Yrs.")
+```
+
+```{r}
+longformda <- list() # initialize empty list
+# loop through each desired column above and create a list of data frames in long format with only the baseline variables and data from each visit for that column
+for (colname in desired_column_names) {
+  # all column beginning with the desired column name
+  columns_to_reshape <- c(names(wideformda)[startsWith(names(wideformda), colname)])
+  longformda[[colname]] <- reshape( # wide format data, baseline variables and desired columns only  
+    data=wideformda[c(baseline_vars,columns_to_reshape)],
+    # specify that we're converting from wide to long format
+    direction="long",
+    # specify that we want to reshape these desired columns
+    varying=columns_to_reshape,
+    # define a new variable that will track what visit number the data comes from
+    timevar="visitnumber",
+    # indicate number of different visits with data for this variable
+    times=c(as.character(1:length(columns_to_reshape))),
+    # we name the column the desired column name
+    v.names=colname,
+    # indicate which variable we use to identify individuals
+    idvar="SID")
+}
+```
+
+```{r}
+# now that we have a list of data frames, this code merges all the data frames together in a compact way
+finalda <- Reduce(
+  function(x,y,...) merge(x, y, by=c(baseline_vars,"visitnumber"), all=TRUE), # merge "by" all the baseline variables and visit number
+  longformda)
+# order data by subject ID and visit number
+finalda$visitnumber <- as.integer(finalda$visitnumber)
+finalda <- finalda[order(finalda$SID, finalda$visitnumber),]
+finalda
+```
+
+# save formatted data frame to csv file for easy viewing
+#write.csv(finalda, file.path(datapath,"longform_spreadsheet.csv"), row.names=FALSE)
+
+```{r}
+write.csv(finalda, file.path(datapath,"longform_spreadsheet.csv"), row.names=FALSE)
+```
+
+
+Defining our sample
+```{r}
+# subset to only cognitively normal individuals (Diag.AV45=="N") and to only individuals with 2+ PET scans (if AV45_TP_CorticalSummary/CerebellarWhole_2 is NA, remove)
+
+newdata <- filter(finalda, Diag.AV45_1 == "N", AV45_TP_CorticalSummary.BigRef_2 != "NA", AV45_TP_CorticalSummary.CerebellarWhole_2 != "NA") 
+
+newdata
+
+nrow(newdata) #Gives us the number of cognitively normal subjects at baseline scan 241
+
+finaldata <- inner_join(select(newdata, SID), finalda, by= "SID")
+finaldata
+
+```
+
+Replicating Table 1 from the paper
+```{r}
+# compute summary statistics (see Table 1, don't need to include every single variable)
+
+#Total (Value in Table 1: 142)
+Total = length(unique(finaldata$SID))
+
+#Florbetapir follow up time, y? (Value in Table 1: 3.9 ± 1.4)
+
+
+#Age at baseline, y (Value in Table 1: 74.7 ± 7.0)
+FirstVisit = filter(finaldata, visitnumber == 1)
+AgeatBaseline = mean(FirstVisit$Age.AV45)
+AgeatBaselineSD = sd(FirstVisit$Age.AV45)
+AgeatBaselineSE = std.error(FirstVisit$Age.AV45)
+AgeatBaselineSE2 = sd(FirstVisit$Age.AV45)/sqrt(length(FirstVisit$Age.AV45))
+
+#Female (Values in Table 1: 72 and 45%)
+FilteredforFemale = filter(finaldata, Gender == 2)
+Female = length(unique(FilteredforFemale$SID))
+FemalePercent = Female / length(unique(finaldata$SID))
+
+#APOE4+ (Values in Table 1: 32 and 15%)
+APOE4Status = filter(finaldata, APOE4_NUM == 1)
+APOE4Plus = length(unique(APOE4Status$SID))
+APOE4PlusPercent = APOE4Plus / length(unique(finaldata$SID))
+
+#Education, y (Value in Table 1: 16.7 ± 2.7)
+Education = mean(FirstVisit$Edu..Yrs.)
+EducationSD = sd(FirstVisit$Edu..Yrs.)
+AgeatBaselineSE = std.error(FirstVisit$Edu..Yrs.)
+AgeatBaselineSE2 = sd(FirstVisit$Edu..Yrs.)/sqrt(length(FirstVisit$Edu..Yrs.))
+
+#Converted to MCI/AD (Values in Table 1: MCI = 12, AD = 2, Percent = 9.9%)
+MCI = filter(More2PETscans, visitnumber != 1, Diag.AV45 == "LMCI")
+ConvertedtoMCI = length(unique(MCI$SID))
+
+AD = filter(More2PETscans, visitnumber != 1, Diag.AV45 == "AD")
+ConvertedtoAD = length(unique(AD$SID))
+
+ConvertedtoMCIorADPercent = (ConvertedtoMCI + ConvertedtoAD)/length(unique(finaldata$SID))
+
+#Converted to florbetapir+ (Values in table 1: 13 and 9.2%)
+
+
+#Memory Composite (Value in Table 1: 1.12 ± 0.58)
+Memory = mean(FirstVisit$UW_MEM_AV45)
+MemorySD = sd(FirstVisit$UW_MEM_AV45)
+MemorySE = std.error(FirstVisit$UW_MEM_AV45)
+MemorySE2 = sd(FirstVisit$UW_MEM_AV45)/sqrt(length(FirstVisit$UW_MEM_AV45))
+
+#Executive Function Compostie (Value in Table 1: 1.00 ± 0.67))
+ExecFunction = mean(FirstVisit$UW_EF_AV45)
+ExecFunctionSD = sd(FirstVisit$UW_EF_AV45)
+ExecFunctionSE = std.error(FirstVisit$UW_EF_AV45)
+ExecFunctionSE2 = sd(FirstVisit$UW_EF_AV45)/sqrt(length(FirstVisit$UW_EF_AV45))
+
+#Cognitive Testing Follow-up, y (Value in Table 1: 3.8 ± 1.0)
+
+```
+
+
+Computing other variables needed for analysis
+```{r}
+# compute baseline amyloid status (if AV45_NONTP_CorticalSummary/CerebellarWhole_1 > 1.11 (see paper), then AB+)
+
+baseline_amyloid_status <- c()
+
+for (i in 1:length(newdata$SID))
+  if (newdata$baseline_AV45_TP_CorticalSummary.BigRef_1[i] < 0.79 &&
+      newdata$baseline_AV45_TP_CorticalSummary.CerebellarWhole_1[i] < 1.11) {
+      baseline_amyloid_status <- baseline_amyloid_status %>% append("AB-")
+  }else if (newdata$baseline_AV45_TP_CorticalSummary.BigRef_1[i] > 0.79 &&
+      newdata$baseline_AV45_TP_CorticalSummary.CerebellarWhole_1[i] > 1.11) {
+      baseline_amyloid_status <- baseline_amyloid_status %>% append("AB+")
+  } else {
+      baseline_amyloid_status <- baseline_amyloid_status %>% append("discordant") 
+  }
+
+baseline_amyloid_status
+table(baseline_amyloid_status) #241 participants, 157 AB-, 61 AB+, 23 discordant 
+
+newdata$baseline_amyloid_status <- baseline_amyloid_status
+
+finaldata <- inner_join(select(newdata, SID, baseline_amyloid_status), finalda, by= "SID")
+finaldata
+
+```
+
+We still need to compute the time variable:
+```{r}
+# compute "time" variable: amount of time (days, months, years, w/e) in between AV45 scan and cognitive test (use dates of each from spreadsheet)
+finaldata$AV45_Date <- mdy(finaldata$AV45_Date) # convert date strings to datetime using lubridate package
+finaldata$time <- as.data.frame(finaldata %>% group_by(SID) %>% mutate(time = (AV45_Date - AV45_Date[1])/365))$time # create new variable "time" in years between first AV45 visit and current visit
+
+finaldata
+```
+
+
+Compute AV45 slope
+```{r}
+# compute AV45 slope using linear regression (could be tricky, lmk if you need help:
+# 1) run lm(AV45_TP_CorticalSummary... ~ Age) for each individual
+# 2) the resulting "Estimate" value for Age is the AV45 slope for that individual
+
+finaldata$annualized_AV45 <- as.data.frame(finaldata %>% group_by(SID) %>% # for each individual
+  # regress AV45 SUVR against time (more accurate than Age), extract estimate for time (slope)
+  mutate(annualized_AV45 = lm(AV45_TP_CorticalSummary.BigRef ~ time)$coefficients["time"]))$annualized_AV45
+
+finaldata$annualized_AV45
+```
+
+Spaghetti plots!
+```{r}
+# figure 1 from paper
+# use ggplot to plot age vs. AV45 SUVR for AB-
+
+baseline_negative <- finaldata %>% select(SID, Age.AV45, AV45_TP_CorticalSummary.BigRef, baseline_amyloid_status) %>% filter(baseline_amyloid_status == "AB-") %>% na.omit
+
+baseline_negative$SID <- as.factor(baseline_negative$SID) #We want SID to be categorical variable, otherwise R thinks it's a numerical value and will assign colors based on gradient
+
+p <- ggplot(data = baseline_negative, aes(x = Age.AV45, y = AV45_TP_CorticalSummary.BigRef, group = SID)) +geom_point(aes(color = SID)) + geom_line(aes(color = SID)) + geom_hline(yintercept = 0.79, linetype = "dotted") + theme(legend.position = "none") +xlim(50, 100)+ylim(0.65, 0.95) + ggtitle("Baseline Negative") + labs(y="Florbetapir SUVR", x = "Age (years)")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+p
+
+# use ggplot to plot age vs. AV45 SUVR for AB+
+
+baseline_positive <- finaldata %>% select(SID, Age.AV45, AV45_TP_CorticalSummary.BigRef, baseline_amyloid_status) %>% filter(baseline_amyloid_status == "AB+") %>% na.omit
+
+baseline_positive$SID <- as.factor(baseline_positive$SID) #We want SID to be categorical variable, otherwise R thinks it's a numerical value and will assign colors based on gradient
+
+p2 <- ggplot(data = baseline_positive, aes(x = Age.AV45, y = AV45_TP_CorticalSummary.BigRef, group = SID)) +geom_point(aes(color = SID)) + geom_line(aes(color = SID)) + geom_hline(yintercept = 0.79, linetype = "dotted") + theme(legend.position = "none") +xlim(50, 100)+ylim(0.70, 1.25) + ggtitle("Baseline Positive") + labs(y="Florbetapir SUVR", x = "Age (years)")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+p2
+
+```
+
+Replace NAs to continue to LME
+```{r}
+na.locf(finaldata)
+```
+
+Linear mixed effects model (LME)
+
+```{r}
+# look into nlme package, same basic structure as lm function: outcome ~ independent variables, also need to define:
+
+# random effects (intercept and slope coded as "~1+time|SID") this is treating time as a variable so we can how the change in time relates to changes in time and amyloid, interaction between time and amyloid and how that affects cognition 
+
+# model control parameters (how hard your model tries to "converge", you can google this if interested but I would use these very liberal parameters: control = lmeControl(opt="optim",maxIter=100,msMaxIter=100,niterEM=50,msMaxEval=400))
+```
+
+Replicating Figure 3 from paper (if we have time)
+
+```{r}
+# if time and interesting in visualization
+# ggplot to make scatter plot of memory slope vs. annualized AV45 change, fit with geom_smooth(method='lm')
+```
+
+
