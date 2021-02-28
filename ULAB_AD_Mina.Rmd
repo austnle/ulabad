@@ -1,7 +1,7 @@
 ---
 title: "ULAB_AD_Mina"
 author: "Mina Baghai"
-date: "2/26/2021"
+date: "2/28/2021"
 output: html_document
 ---
 
@@ -187,7 +187,7 @@ p2
 ```
 Replace all NA values in order to continue with LME
 ```{r}
-na.locf(finalda)
+na.locf(finaldata)
 ```
 
 Linear mixed effects model (LME)
