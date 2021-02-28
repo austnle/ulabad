@@ -18,8 +18,6 @@ library(dplyr)
 library(lubridate)
 #install.packages("zoo")
 library(zoo)
-#install.packages("plotrix")
-library(plotrix)
 ```
 
 ## R Markdown
