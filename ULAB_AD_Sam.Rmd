@@ -129,51 +129,51 @@ Total = length(unique(finaldata$SID))
 
 
 #Age at baseline, y (Value in Table 1: 74.7 ± 7.0)
-FirstVisit = filter(finaldata, visitnumber == 1)
-AgeatBaseline = mean(FirstVisit$Age.AV45)
-AgeatBaselineSD = sd(FirstVisit$Age.AV45)
-AgeatBaselineSE = std.error(FirstVisit$Age.AV45)
-AgeatBaselineSE2 = sd(FirstVisit$Age.AV45)/sqrt(length(FirstVisit$Age.AV45))
+FirstVisit = filter(finaldata, visitnumber == 1) #filter for all first visits
+AgeatBaseline = mean(FirstVisit$Age.AV45) #find mean age at first visit
+AgeatBaselineSD = sd(FirstVisit$Age.AV45) #returns 6.8 - close to paper
+AgeatBaselineSE = std.error(FirstVisit$Age.AV45) #using plotrix function
+AgeatBaselineSE2 = sd(FirstVisit$Age.AV45)/sqrt(length(FirstVisit$Age.AV45)) #same number as previous function
 
 #Female (Values in Table 1: 72 and 45%)
-FilteredforFemale = filter(finaldata, Gender == 2)
-Female = length(unique(FilteredforFemale$SID))
-FemalePercent = Female / length(unique(finaldata$SID))
+FilteredforFemale = filter(finaldata, Gender == 2) #filter for all females
+Female = length(unique(FilteredforFemale$SID)) #find number of unique female SIDs
+FemalePercent = Female / length(unique(finaldata$SID)) #number of females divided by number of participants
 
 #APOE4+ (Values in Table 1: 32 and 15%)
-APOE4Status = filter(finaldata, APOE4_NUM == 1)
-APOE4Plus = length(unique(APOE4Status$SID))
-APOE4PlusPercent = APOE4Plus / length(unique(finaldata$SID))
+APOE4Status = filter(finaldata, APOE4_NUM == 1) #filtered for all APOE4+
+APOE4Plus = length(unique(APOE4Status$SID)) #find number of APOE4+
+APOE4PlusPercent = APOE4Plus / length(unique(finaldata$SID)) #number of APOE4+ divided by number of participants
 
 #Education, y (Value in Table 1: 16.7 ± 2.7)
-Education = mean(FirstVisit$Edu..Yrs.)
-EducationSD = sd(FirstVisit$Edu..Yrs.)
-AgeatBaselineSE = std.error(FirstVisit$Edu..Yrs.)
-AgeatBaselineSE2 = sd(FirstVisit$Edu..Yrs.)/sqrt(length(FirstVisit$Edu..Yrs.))
+Education = mean(FirstVisit$Edu..Yrs.) #find mean of education years at first visit
+EducationSD = sd(FirstVisit$Edu..Yrs.) #returns 2.7 - close to paper
+EducationSE = std.error(FirstVisit$Edu..Yrs.) #using plotrix function
+EducationSE2 = sd(FirstVisit$Edu..Yrs.)/sqrt(length(FirstVisit$Edu..Yrs.)) #same number as previous function
 
 #Converted to MCI/AD (Values in Table 1: MCI = 12, AD = 2, Percent = 9.9%)
-MCI = filter(More2PETscans, visitnumber != 1, Diag.AV45 == "LMCI")
-ConvertedtoMCI = length(unique(MCI$SID))
+MCI = filter(finaldata, visitnumber != 1, Diag.AV45 == "LMCI") #find anyone MCI at any point
+ConvertedtoMCI = length(unique(MCI$SID)) #number of people who converted to MCI because had filtered to cognitively normal at baseline
 
-AD = filter(More2PETscans, visitnumber != 1, Diag.AV45 == "AD")
-ConvertedtoAD = length(unique(AD$SID))
+AD = filter(finaldata, visitnumber != 1, Diag.AV45 == "AD") #find anyone AD at any point
+ConvertedtoAD = length(unique(AD$SID)) #number of people who converted to AD because had filtered to cognitively normal at baseline
 
-ConvertedtoMCIorADPercent = (ConvertedtoMCI + ConvertedtoAD)/length(unique(finaldata$SID))
+ConvertedtoMCIorADPercent = (ConvertedtoMCI + ConvertedtoAD)/length(unique(finaldata$SID)) #number of people converted to MCI or AD divided by number of participants
 
 #Converted to florbetapir+ (Values in table 1: 13 and 9.2%)
 
 
 #Memory Composite (Value in Table 1: 1.12 ± 0.58)
-Memory = mean(FirstVisit$UW_MEM_AV45)
-MemorySD = sd(FirstVisit$UW_MEM_AV45)
-MemorySE = std.error(FirstVisit$UW_MEM_AV45)
-MemorySE2 = sd(FirstVisit$UW_MEM_AV45)/sqrt(length(FirstVisit$UW_MEM_AV45))
+Memory = mean(FirstVisit$UW_MEM_AV45) #find mean of memory score at first visit
+MemorySD = sd(FirstVisit$UW_MEM_AV45) #returns 0.59 - close to paper
+MemorySE = std.error(FirstVisit$UW_MEM_AV45) #using plotrix function
+MemorySE2 = sd(FirstVisit$UW_MEM_AV45)/sqrt(length(FirstVisit$UW_MEM_AV45)) #same number as previous function
 
 #Executive Function Compostie (Value in Table 1: 1.00 ± 0.67))
-ExecFunction = mean(FirstVisit$UW_EF_AV45)
-ExecFunctionSD = sd(FirstVisit$UW_EF_AV45)
-ExecFunctionSE = std.error(FirstVisit$UW_EF_AV45)
-ExecFunctionSE2 = sd(FirstVisit$UW_EF_AV45)/sqrt(length(FirstVisit$UW_EF_AV45))
+ExecFunction = mean(FirstVisit$UW_EF_AV45) #find mean of executive function score at first visit
+ExecFunctionSD = sd(FirstVisit$UW_EF_AV45) #returns 0.76
+ExecFunctionSE = std.error(FirstVisit$UW_EF_AV45) #using plotrix function
+ExecFunctionSE2 = sd(FirstVisit$UW_EF_AV45)/sqrt(length(FirstVisit$UW_EF_AV45)) #same number as previous function
 
 #Cognitive Testing Follow-up, y (Value in Table 1: 3.8 ± 1.0)
 
