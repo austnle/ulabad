@@ -1,7 +1,7 @@
 ---
 title: "ULAB_AD_Mina"
 author: "Mina Baghai"
-date: "2/28/2021"
+date: "3/7/2021"
 output: html_document
 ---
 
@@ -111,6 +111,58 @@ nrow(newdata) #Gives us the number of cognitively normal subjects at baseline sc
 finaldata <- inner_join(select(newdata, SID), finalda, by= "SID")
 finaldata
 ```
+Replicating Table 1 from the paper
+```{r}
+# compute summary statistics (see Table 1, don't need to include every single variable)
+
+#Total (Value in Table 1: 142)
+Total = length(unique(finaldata$SID))
+
+#Florbetapir follow up time, y? (Value in Table 1: 3.9 ± 1.4)
+
+
+#Age at baseline, y (Value in Table 1: 74.7 ± 7.0)
+FirstVisit = filter(finaldata, visitnumber == 1) #filter for all first visits
+AgeatBaseline = mean(FirstVisit$Age.AV45) #find mean age at first visit
+AgeatBaselineSD = sd(FirstVisit$Age.AV45) #find st dev for age at first visit
+
+#Female (Values in Table 1: 72 and 45%)
+FilteredforFemale = filter(finaldata, Gender == 2) #filter for all females
+Female = length(unique(FilteredforFemale$SID)) #find number of unique female SIDs
+FemalePercent = Female / length(unique(finaldata$SID)) #number of females divided by number of participants
+
+#APOE4+ (Values in Table 1: 32 and 15%)
+APOE4Status = filter(finaldata, APOE4_NUM == 1) #filtered for all APOE4+
+APOE4Plus = length(unique(APOE4Status$SID)) #find number of APOE4+
+APOE4PlusPercent = APOE4Plus / length(unique(finaldata$SID)) #number of APOE4+ divided by number of participants
+
+#Education, y (Value in Table 1: 16.7 ± 2.7)
+Education = mean(FirstVisit$Edu..Yrs.) #find mean of education years at first visit
+EducationSD = sd(FirstVisit$Edu..Yrs.) #find st dev for education at first visit
+
+#Converted to MCI/AD (Values in Table 1: MCI = 12, AD = 2, Percent = 9.9%)
+MCI = filter(finaldata, visitnumber != 1, Diag.AV45 == "LMCI") #find anyone MCI at any point
+ConvertedtoMCI = length(unique(MCI$SID)) #number of people who converted to MCI because had filtered to cognitively normal at baseline
+
+AD = filter(finaldata, visitnumber != 1, Diag.AV45 == "AD") #find anyone AD at any point
+ConvertedtoAD = length(unique(AD$SID)) #number of people who converted to AD because had filtered to cognitively normal at baseline
+
+ConvertedtoMCIorADPercent = (ConvertedtoMCI + ConvertedtoAD)/length(unique(finaldata$SID)) #number of people converted to MCI or AD divided by number of participants
+
+#Converted to florbetapir+ (Values in table 1: 13 and 9.2%)
+
+
+#Memory Composite (Value in Table 1: 1.12 ± 0.58)
+Memory = mean(FirstVisit$UW_MEM_AV45) #find mean of memory score at first visit
+MemorySD = sd(FirstVisit$UW_MEM_AV45) #find st dev for memory score at first visit
+
+#Executive Function Compostie (Value in Table 1: 1.00 ± 0.67))
+ExecFunction = mean(FirstVisit$UW_EF_AV45) #find mean of exec function score at first visit
+ExecFunctionSD = sd(FirstVisit$UW_EF_AV45) #find st dev for exec function score at first visit
+
+#Cognitive Testing Follow-up, y (Value in Table 1: 3.8 ± 1.0)
+
+```
 
 Computing other variables needed for analysis (baseline amyloid status)
 ```{r}
@@ -185,10 +237,6 @@ p2 <- ggplot(data = baseline_positive, aes(x = Age.AV45, y = AV45_TP_CorticalSum
 
 p2
 ```
-Replace all NA values in order to continue with LME
-```{r}
-na.locf(finaldata)
-```
 
 Linear mixed effects model (LME)
 ```{r}
@@ -197,6 +245,11 @@ Linear mixed effects model (LME)
 # random effects (intercept and slope coded as "~1+time|SID")
 
 # model control parameters (how hard your model tries to "converge", you can google this if interested but I would use these very liberal parameters: control = lmeControl(opt="optim",maxIter=100,msMaxIter=100,niterEM=50,msMaxEval=400))
+
+memory_lme <- lme((UW_MEM_AV45 ~ Gender + APOE4_NUM + Edu..Yrs. + Age.AV45 + baseline_AV45_TP_CorticalSummary.BigRef_1 + time + baseline_AV45_TP_CorticalSummary.BigRef_1 + annualized_AV45 + time * annualized_AV45), data = na.locf(finaldata), random = ~1+time|SID )
+
+ef_lme <- lme((UW_EF_AV45 ~ Gender + APOE4_NUM + Edu..Yrs. + Age.AV45 + baseline_AV45_TP_CorticalSummary.BigRef_1 + time + baseline_AV45_TP_CorticalSummary.BigRef_1 + annualized_AV45 + time * annualized_AV45), data = na.locf(finaldata), random = ~1+time|SID )
+
 ```
 
 Replicating Figure 3 from paper
