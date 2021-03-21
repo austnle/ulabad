@@ -1,7 +1,7 @@
 ---
 title: "ULAB_AD_Mina"
 author: "Mina Baghai"
-date: "3/7/2021"
+date: "3/21/2021"
 output: html_document
 ---
 
@@ -61,7 +61,7 @@ longformda <- list() # initialize empty list
 for (colname in desired_column_names) {
   # all column beginning with the desired column name
   columns_to_reshape <- c(names(wideformda)[startsWith(names(wideformda), colname)])
-  longformda[[colname]] <- reshape( # wide format data, baseline variables and desired columns only
+  longformda[[colname]] <- reshape( # wide format data, baseline variables and desired columns only  
     data=wideformda[c(baseline_vars,columns_to_reshape)],
     # specify that we're converting from wide to long format
     direction="long",
@@ -89,8 +89,6 @@ finalda <- finalda[order(finalda$SID, finalda$visitnumber),]
 finalda
 ```
 
-
-
 # save formatted data frame to csv file for easy viewing
 #write.csv(finalda, file.path(datapath,"longform_spreadsheet.csv"), row.names=FALSE)
 
@@ -98,10 +96,10 @@ finalda
 write.csv(finalda, file.path(datapath,"longform_spreadsheet.csv"), row.names=FALSE)
 ```
 
+
 Defining our sample
 ```{r}
 # subset to only cognitively normal individuals (Diag.AV45=="N") and to only individuals with 2+ PET scans (if AV45_TP_CorticalSummary/CerebellarWhole_2 is NA, remove)
-
 newdata <- filter(finalda, Diag.AV45_1 == "N", AV45_TP_CorticalSummary.BigRef_2 != "NA", AV45_TP_CorticalSummary.CerebellarWhole_2 != "NA") 
 
 newdata
@@ -110,63 +108,13 @@ nrow(newdata) #Gives us the number of cognitively normal subjects at baseline sc
 
 finaldata <- inner_join(select(newdata, SID), finalda, by= "SID")
 finaldata
-```
-Replicating Table 1 from the paper
-```{r}
-# compute summary statistics (see Table 1, don't need to include every single variable)
-
-#Total (Value in Table 1: 142)
-Total = length(unique(finaldata$SID))
-
-#Florbetapir follow up time, y? (Value in Table 1: 3.9 ± 1.4)
-
-
-#Age at baseline, y (Value in Table 1: 74.7 ± 7.0)
-FirstVisit = filter(finaldata, visitnumber == 1) #filter for all first visits
-AgeatBaseline = mean(FirstVisit$Age.AV45) #find mean age at first visit
-AgeatBaselineSD = sd(FirstVisit$Age.AV45) #find st dev for age at first visit
-
-#Female (Values in Table 1: 72 and 45%)
-FilteredforFemale = filter(finaldata, Gender == 2) #filter for all females
-Female = length(unique(FilteredforFemale$SID)) #find number of unique female SIDs
-FemalePercent = Female / length(unique(finaldata$SID)) #number of females divided by number of participants
-
-#APOE4+ (Values in Table 1: 32 and 15%)
-APOE4Status = filter(finaldata, APOE4_NUM == 1) #filtered for all APOE4+
-APOE4Plus = length(unique(APOE4Status$SID)) #find number of APOE4+
-APOE4PlusPercent = APOE4Plus / length(unique(finaldata$SID)) #number of APOE4+ divided by number of participants
-
-#Education, y (Value in Table 1: 16.7 ± 2.7)
-Education = mean(FirstVisit$Edu..Yrs.) #find mean of education years at first visit
-EducationSD = sd(FirstVisit$Edu..Yrs.) #find st dev for education at first visit
-
-#Converted to MCI/AD (Values in Table 1: MCI = 12, AD = 2, Percent = 9.9%)
-MCI = filter(finaldata, visitnumber != 1, Diag.AV45 == "LMCI") #find anyone MCI at any point
-ConvertedtoMCI = length(unique(MCI$SID)) #number of people who converted to MCI because had filtered to cognitively normal at baseline
-
-AD = filter(finaldata, visitnumber != 1, Diag.AV45 == "AD") #find anyone AD at any point
-ConvertedtoAD = length(unique(AD$SID)) #number of people who converted to AD because had filtered to cognitively normal at baseline
-
-ConvertedtoMCIorADPercent = (ConvertedtoMCI + ConvertedtoAD)/length(unique(finaldata$SID)) #number of people converted to MCI or AD divided by number of participants
-
-#Converted to florbetapir+ (Values in table 1: 13 and 9.2%)
-
-
-#Memory Composite (Value in Table 1: 1.12 ± 0.58)
-Memory = mean(FirstVisit$UW_MEM_AV45) #find mean of memory score at first visit
-MemorySD = sd(FirstVisit$UW_MEM_AV45) #find st dev for memory score at first visit
-
-#Executive Function Compostie (Value in Table 1: 1.00 ± 0.67))
-ExecFunction = mean(FirstVisit$UW_EF_AV45) #find mean of exec function score at first visit
-ExecFunctionSD = sd(FirstVisit$UW_EF_AV45) #find st dev for exec function score at first visit
-
-#Cognitive Testing Follow-up, y (Value in Table 1: 3.8 ± 1.0)
 
 ```
 
-Computing other variables needed for analysis (baseline amyloid status)
+Computing baseline amyloid status:
 ```{r}
 # compute baseline amyloid status (if AV45_NONTP_CorticalSummary/CerebellarWhole_1 > 1.11 (see paper), then AB+)
+
 baseline_amyloid_status <- c()
 
 for (i in 1:length(newdata$SID))
@@ -187,10 +135,77 @@ newdata$baseline_amyloid_status <- baseline_amyloid_status
 
 finaldata <- inner_join(select(newdata, SID, baseline_amyloid_status), finalda, by= "SID")
 finaldata
+```
+
+
+Replicating Table 1 from the paper (on baseline amyloid negative)
+```{r}
+# compute summary statistics (see Table 1, don't need to include every single variable)
+finaldata_abnegative <- finaldata %>% filter(baseline_amyloid_status=="AB-")
+
+#Total (Value in Table 1: 142)
+Total = length(unique(finaldata_abnegative$SID)) 
+#157
+
+#Florbetapir follow up time, y? (Value in Table 1: 3.9 ± 1.4)
+
+#Age at baseline, y (Value in Table 1: 74.7 ± 7.0)
+FirstVisit = filter(finaldata_abnegative, visitnumber == 1) #filter for all first visits
+AgeatBaseline = mean(FirstVisit$Age.AV45) #find mean age at first visit
+#74.2160
+AgeatBaselineSD = sd(FirstVisit$Age.AV45) #find st dev for age at first visit
+#6.98805
+
+#Female (Values in Table 1: 72 and 45%)
+FilteredforFemale = filter(finaldata_abnegative, Gender == 2) #filter for all females
+Female = length(unique(FilteredforFemale$SID)) #find number of unique female SIDs
+#68
+FemalePercent = Female / length(unique(finaldata_abnegative$SID)) #number of females divided by number of participants
+#43.31 percent
+
+#APOE4+ (Values in Table 1: 32 and 15%)
+APOE4Status = filter(finaldata_abnegative, APOE4_NUM == 1) #filtered for all APOE4+
+APOE4Plus = length(unique(APOE4Status$SID)) #find number of APOE4+
+#30
+
+APOE4PlusPercent = APOE4Plus / length(unique(finaldata_abnegative$SID)) #number of APOE4+ divided by number of participants
+#19.11 percent
+
+#Education, y (Value in Table 1: 16.7 ± 2.7)
+Education = mean(FirstVisit$Edu..Yrs.) #find mean of education years at first visit
+#16.656
+EducationSD = sd(FirstVisit$Edu..Yrs.) #find st dev for education at first visit
+#2.6691
+#Converted to MCI/AD (Values in Table 1: MCI = 12, AD = 2, Percent = 9.9%)
+MCI = filter(finaldata_abnegative, visitnumber != 1, Diag.AV45 == "LMCI") #find anyone MCI at any point
+ConvertedtoMCI = length(unique(MCI$SID)) #number of people who converted to MCI because had filtered to cognitively normal at baseline
+#18
+AD = filter(finaldata_abnegative, visitnumber != 1, Diag.AV45 == "AD") #find anyone AD at any point
+ConvertedtoAD = length(unique(AD$SID)) #number of people who converted to AD because had filtered to cognitively normal at baseline
+#2
+ConvertedtoMCIorADPercent = (ConvertedtoMCI + ConvertedtoAD)/length(unique(finaldata_abnegative$SID)) #number of people converted to MCI or AD divided by number of participants
+#12.738 percent
+
+#Converted to florbetapir+ (Values in table 1: 13 and 9.2%)
+
+#Memory Composite (Value in Table 1: 1.12 ± 0.58)
+Memory = mean(FirstVisit$UW_MEM_AV45) #find mean of memory score at first visit
+#1.1355
+MemorySD = sd(FirstVisit$UW_MEM_AV45) #find st dev for memory score at first visit
+#0.5637
+
+#Executive Function Compostie (Value in Table 1: 1.00 ± 0.67))
+ExecFunction = mean(FirstVisit$UW_EF_AV45) #find mean of exec function score at first visit
+#1.12
+ExecFunctionSD = sd(FirstVisit$UW_EF_AV45) #find st dev for exec function score at first visit
+#0.753
+
+#Cognitive Testing Follow-up, y (Value in Table 1: 3.8 ± 1.0)
+
 
 ```
 
-Computing the time variable
+Time variable:
 ```{r}
 # compute "time" variable: amount of time (days, months, years, w/e) in between AV45 scan and cognitive test (use dates of each from spreadsheet)
 finaldata$AV45_Date <- mdy(finaldata$AV45_Date) # convert date strings to datetime using lubridate package
@@ -198,7 +213,8 @@ finaldata$time <- as.data.frame(finaldata %>% group_by(SID) %>% mutate(time = (A
 
 finaldata
 ```
-Compute AV45 Slope
+
+Compute AV45 slope
 ```{r}
 # compute AV45 slope using linear regression (could be tricky, lmk if you need help:
 # 1) run lm(AV45_TP_CorticalSummary... ~ Age) for each individual
@@ -209,7 +225,6 @@ finaldata$annualized_AV45 <- as.data.frame(finaldata %>% group_by(SID) %>% # for
   mutate(annualized_AV45 = lm(AV45_TP_CorticalSummary.BigRef ~ time)$coefficients["time"]))$annualized_AV45
 
 finaldata$annualized_AV45
-finaldata
 ```
 
 Spaghetti plots!
@@ -236,26 +251,134 @@ p2 <- ggplot(data = baseline_positive, aes(x = Age.AV45, y = AV45_TP_CorticalSum
   theme(plot.title = element_text(hjust = 0.5))
 
 p2
+
 ```
 
-Linear mixed effects model (LME)
+
+Creating a new dataset for use in linear mixed effects modeling
+```{r}
+#using finaldata works in the other analyses, but for LME we will need to remove the NA values. Participant with SID 6051 has NA values for APOE2 and APOE4 statuses, so will be removed from LME modeling. 241 cognitively normal individuals reduced to 240 individuals here.
+
+finaldata
+
+finaldata2 <- finaldata
+finaldata2$Diag.AV45_1 <- na.locf(finaldata2$Diag.AV45_1)
+finaldata2$baseline_AV45_TP_CorticalSummary.BigRef_1 <- na.locf(finaldata2$baseline_AV45_TP_CorticalSummary.BigRef_1)
+
+finaldata2 <- finaldata2 %>% select(-baseline_AV45_TP_CorticalSummary.CerebellarWhole_1, -AV45_TP_CorticalSummary.CerebellarWhole_2, -AV45_TP_CorticalSummary.BigRef_2)
+
+finaldata2 <- na.omit(finaldata2) #finaldata2 now has no NA values
+
+```
+Linear mixed effects model (LME) on baseline AB negative finaldata2
+
 ```{r}
 # look into nlme package, same basic structure as lm function: outcome ~ independent variables, also need to define:
+finaldata2_abnegative <- finaldata2 %>% filter(baseline_amyloid_status=="AB-")
 
-# random effects (intercept and slope coded as "~1+time|SID")
+length(unique(finaldata2_abnegative$SID)) #156 total individuals cognitively normal and baseline AB-
+
+#ModelA: Longitudinal memory as dependent variable
+
+#at least 2 scans
+summary(lme((UW_MEM_AV45 ~ Gender + APOE4_NUM + Edu..Yrs. + Age.AV45 + time + baseline_AV45_TP_CorticalSummary.BigRef_1 + time * baseline_AV45_TP_CorticalSummary.BigRef_1 + annualized_AV45 + time * annualized_AV45), data = finaldata2_abnegative, random = ~1+time|SID, control = lmeControl(opt="optim",maxIter=100,msMaxIter=100,niterEM=50,msMaxEval=400) ))
+
+#ModelB: Longitudinal executive function as dependent variable
+
+#at least 2 scans
+summary(lme((UW_EF_AV45 ~ Gender + APOE4_NUM + Edu..Yrs. + Age.AV45 + time + baseline_AV45_TP_CorticalSummary.BigRef_1 + time * baseline_AV45_TP_CorticalSummary.BigRef_1 + annualized_AV45 + time * annualized_AV45), data = finaldata2_abnegative, random = ~1+time|SID, control = lmeControl(opt="optim",maxIter=100,msMaxIter=100,niterEM=50,msMaxEval=400) ))
+
+# random effects (intercept and slope coded as "~1+time|SID") this is treating time as a variable so we can how the change in time relates to changes in time and amyloid, interaction between time and amyloid and how that affects cognition 
 
 # model control parameters (how hard your model tries to "converge", you can google this if interested but I would use these very liberal parameters: control = lmeControl(opt="optim",maxIter=100,msMaxIter=100,niterEM=50,msMaxEval=400))
-
-memory_lme <- lme((UW_MEM_AV45 ~ Gender + APOE4_NUM + Edu..Yrs. + Age.AV45 + baseline_AV45_TP_CorticalSummary.BigRef_1 + time + baseline_AV45_TP_CorticalSummary.BigRef_1 + annualized_AV45 + time * annualized_AV45), data = na.locf(finaldata), random = ~1+time|SID )
-
-ef_lme <- lme((UW_EF_AV45 ~ Gender + APOE4_NUM + Edu..Yrs. + Age.AV45 + baseline_AV45_TP_CorticalSummary.BigRef_1 + time + baseline_AV45_TP_CorticalSummary.BigRef_1 + annualized_AV45 + time * annualized_AV45), data = na.locf(finaldata), random = ~1+time|SID )
-
 ```
 
-Replicating Figure 3 from paper
+Subsetting finaldata2 based on number of scans
 ```{r}
-# if time and interesting in visualization
-# ggplot to make scatter plot of memory slope vs. annualized AV45 change, fit with geom_smooth(method='lm')
+length(unique((finaldata2_abnegative %>%
+  group_by(SID) %>%
+  filter(n() == 2))$SID))
+#42 had exactly 2 scans
+length(unique((finaldata2_abnegative %>%
+  group_by(SID) %>%
+  filter(n() == 3))$SID))
+#44 had exaclty 3 scans
+length(unique((finaldata2_abnegative %>%
+  group_by(SID) %>%
+  filter(n() == 4))$SID))
+#41 had exactly 4 scans
+length(unique((finaldata2_abnegative %>%
+  group_by(SID) %>%
+  filter(n() == 5))$SID))
+#28 had exactly 5 scans
+length(unique((finaldata2_abnegative %>%
+  group_by(SID) %>%
+  filter(n() == 6))$SID))
+#1 had exactly 6 scans
+
+length(unique((finaldata2_abnegative %>%
+  group_by(SID) %>%
+  filter(n() >2))$SID))
+#114 have at least 3 scans
+
+length(unique((finaldata2_abnegative %>%
+  group_by(SID) %>%
+  filter(n() >1))$SID))
+#156 have at least 2 scans
+
 ```
+
+LME model at least 3 scans
+```{r}
+finaldata2_abnegative_atleast3scans <- finaldata2_abnegative %>%
+  group_by(SID) %>%
+  filter(n() >2)
+
+#modelA: Longitudinal memory as dependent variable, at least 3 scans
+summary(lme((UW_MEM_AV45 ~ Gender + APOE4_NUM + Edu..Yrs. + Age.AV45 + time + baseline_AV45_TP_CorticalSummary.BigRef_1 + time * baseline_AV45_TP_CorticalSummary.BigRef_1 + annualized_AV45 + time * annualized_AV45), data = finaldata2_abnegative_atleast3scans, random = ~1+time|SID, control = lmeControl(opt="optim",maxIter=100,msMaxIter=100,niterEM=50,msMaxEval=400) ))
+
+#modelB: Longitudinal executive function as dependent variable, at least 3 scans
+summary(lme((UW_EF_AV45 ~ Gender + APOE4_NUM + Edu..Yrs. + Age.AV45 + time + baseline_AV45_TP_CorticalSummary.BigRef_1 + time * baseline_AV45_TP_CorticalSummary.BigRef_1 + annualized_AV45 + time * annualized_AV45), data = finaldata2_abnegative_atleast3scans, random = ~1+time|SID, control = lmeControl(opt="optim",maxIter=100,msMaxIter=100,niterEM=50,msMaxEval=400) ))
+```
+
+Replicating Figure 3:
+
+Memory slope vs. annualized AV45 change
+```{r}
+# ggplot to make scatter plot of memory slope vs. annualized AV45 change, fit with geom_smooth(method='lm')
+
+finaldata <- as.data.frame(finaldata %>% group_by(SID) %>% # for each individual
+  # regress memory against Age (or time), extract estimate for Age (slope)
+  mutate(memory_slope = lm(UW_MEM_AV45 ~ Age.AV45)$coefficients["Age.AV45"]))
+
+testda <- finaldata[finaldata$baseline_amyloid_status=="AB-",]
+testda_baseline <- testda[!duplicated(testda$SID),]
+ggplot(data=testda_baseline, aes(x=annualized_AV45, y=memory_slope)) +
+        geom_point() +
+        geom_smooth(method='lm') +
+        ylim(c(-0.4,0.6))+
+        xlim(c(-0.02,0.04))+ # plot limits same as Fig. 3
+        theme(aspect.ratio = 1)
+
+```
+Executive Function slope vs. annualized AV45 change
+```{r}
+# ggplot to make scatter plot of memory slope vs. annualized AV45 change, fit with geom_smooth(method='lm')
+
+finaldata <- as.data.frame(finaldata %>% group_by(SID) %>% # for each individual
+  # regress memory against Age (or time), extract estimate for Age (slope)
+  mutate(EF_slope = lm(UW_EF_AV45 ~ Age.AV45)$coefficients["Age.AV45"]))
+
+testda <- finaldata[finaldata$baseline_amyloid_status=="AB-",]
+testda_baseline <- testda[!duplicated(testda$SID),]
+ggplot(data=testda_baseline, aes(x=annualized_AV45, y=EF_slope)) +
+        geom_point() +
+        geom_smooth(method='lm') +
+        ylim(c(-0.4,0.6))+
+        xlim(c(-0.02,0.04))+ # plot limits same as Fig. 3
+        theme(aspect.ratio = 1)
+
+```
+
 
 
